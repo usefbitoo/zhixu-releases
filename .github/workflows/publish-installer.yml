@@ -1,0 +1,27 @@
+name: Publish verified installer
+on:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Download and verify immutable public installer
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail --location --proto '=https' --tlsv1.2 --retry 2 --max-time 480 --output Zhixu-Setup-x64.exe https://releases.mianbaoren.cn/desktop/stable/0.3.37/Zhixu-Setup-x64.exe
+          test "$(stat -c %s Zhixu-Setup-x64.exe)" = 267319344
+          echo '9b9373996b8d2d18214889145a86221500f89b603c2c2204efd44fc7e6551934  Zhixu-Setup-x64.exe' > Zhixu-Setup-x64.exe.sha256
+          sha256sum --check Zhixu-Setup-x64.exe.sha256
+      - name: Upload verified installer and publish release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: usefbitoo/zhixu-releases
+        run: |
+          set -euo pipefail
+          gh release upload v0.3.37 Zhixu-Setup-x64.exe Zhixu-Setup-x64.exe.sha256 --clobber
+          gh release edit v0.3.37 --draft=false --latest
